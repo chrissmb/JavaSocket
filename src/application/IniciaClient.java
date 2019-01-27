@@ -5,28 +5,33 @@ import java.net.UnknownHostException;
 
 import org.chrissmb.socket.cliente.Cliente;
 
-import view.ListaPessoas;
+import util.Mensagem;
+import view.LoginTela;
 
-public class ClientApp {
+public class IniciaClient {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		new ClientApp().start();
+		new IniciaClient().start();
 	}
 	
-	public void start() {
+	private void start() {
 		Cliente cliente = new Cliente();
 		cliente.setHost("localhost");
 		try {
 			cliente.start();
+			new LoginTela(cliente);
+//			new ListaPessoasTela(cliente);
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Mensagem.alert(e.getMessage());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Mensagem.alert(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+			Mensagem.alert(e.getMessage());
 		}
-		new ListaPessoas(cliente);
 	}
 
 }

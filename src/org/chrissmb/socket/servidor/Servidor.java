@@ -9,6 +9,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import org.chrissmb.socket.shared.Acao;
+import org.chrissmb.socket.shared.Login;
 import org.chrissmb.socket.shared.Requisicao;
 import org.chrissmb.socket.shared.Resposta;
 import org.chrissmb.socket.shared.Status;
@@ -16,12 +17,12 @@ import org.chrissmb.socket.shared.Status;
 public class Servidor {
 
 	private int port = 1234;
-	
+
 	private String rotaPackage = "rota";
-	
-	private Socket client;
-	
+
 	private ServerSocket server;
+
+	private Autenticacao autenticacao;
 
 	public void start() {
 		try {
@@ -31,63 +32,79 @@ public class Servidor {
 			e.printStackTrace();
 			return;
 		}
-		
+
 		while (true) {
 			try {
-				client = server.accept();
-				System.out.println("Cliente conectado: " + client.getInetAddress()
-						.getHostAddress());
-				new ServidorThread().start();
+				Socket client = server.accept();
+				System.out.println("Cliente conectado: " + client.getInetAddress().getHostAddress());
+				new ServidorThread(client).start();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	private class ServidorThread extends Thread {
-		
+
+		private Socket client;
+
 		private ObjectInputStream input;
-		
+
 		private ObjectOutputStream output;
-		
-		private Requisicao requisicao;
-		
-		private Resposta respota;
-		
+
+		public ServidorThread(Socket client) {
+			this.client = client;
+		}
+
 		@Override
 		public void run() {
 			try {
 				output = new ObjectOutputStream(client.getOutputStream());
 				input = new ObjectInputStream(client.getInputStream());
-				
+
+				if (autenticacao != null) {
+					while (!autenticar()) {}
+				}
+
 				while (true) {
-					requisicao = (Requisicao) input.readObject();
-					Resposta resposta = executaRota();
+					Requisicao requisicao = (Requisicao) input.readObject();
+					Resposta resposta = executaRota(requisicao);
 					enviarObjeto(resposta);
 				}
-			} catch (ClassNotFoundException e) {
+			} catch (ClassNotFoundException | NullPointerException e) {
 				System.err.println("Objeto recebido inválido: " + e.getMessage());
 			} catch (IOException e) {
-				System.err.println("Erro de IO: " + e.getMessage());
+				System.out.println("Erro de IO: " + e.getMessage());
+				System.out.println(client.getInetAddress().getHostAddress() + " desconectou.");
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-		
-		public void enviarObjeto(Object obj) throws IOException {
+
+		private void enviarObjeto(Object obj) throws IOException {
 			output.reset();
 			output.flush();
 			output.writeObject(obj);
 		}
-		
-		public Resposta executaRota() {
+
+		private Resposta executaRota(Requisicao requisicao) {
 			Resposta resposta = new Resposta();
 			resposta.setStatus(Status.ACAO_INVALIDA);
 			try {
-				Class<?> clazz = Class.forName(rotaPackage + "." + requisicao.getRota());
-				Object obj = clazz.getDeclaredConstructors()[0].newInstance();
+				Class<?> classRota = Class.forName(rotaPackage + "." + requisicao.getRota());
+
+				if (!possuiAcessoRota(classRota)) {
+					resposta.setStatus(Status.ACESSO_NEGADO);
+					return resposta;
+				}
+
+				Object obj = classRota.getDeclaredConstructors()[0].newInstance();
+				Method metodo = buscaMetodo(requisicao, classRota);
 				
-				Method metodo = buscaMetodo(clazz);
+				if (!possuiAcessoAcao(metodo)) {
+					resposta.setStatus(Status.ACESSO_NEGADO);
+					return resposta;
+				}
 				
 				if (metodo.getParameterTypes().length == 0) {
 					resposta.setObjeto(metodo.invoke(obj));
@@ -96,27 +113,68 @@ public class Servidor {
 					resposta.setObjeto(metodo.invoke(obj, requisicao.getObjeto()));
 					resposta.setStatus(Status.SUCESSO);
 				}
-				
-			} catch (ClassNotFoundException | InstantiationException | 
-					IllegalAccessException | IllegalArgumentException | 
-					InvocationTargetException | SecurityException e) {
+
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | SecurityException e) {
 				resposta.setStatus(Status.ROTA_INVALIDA);
 			} catch (Exception e) {
 				resposta.setStatus(Status.ERRO_DESCONHECIDO);
 			}
-			
+
 			return resposta;
 		}
-		
-		private Method buscaMetodo(Class<?> clazz) {
-			for (Method metodo : clazz.getDeclaredMethods()) {
-				if (!metodo.isAnnotationPresent(Acao.class)) continue;
+
+		private Method buscaMetodo(Requisicao requisicao, Class<?> classRota) {
+			for (Method metodo : classRota.getDeclaredMethods()) {
+				if (!metodo.isAnnotationPresent(Acao.class))
+					continue;
 				Acao acao = metodo.getAnnotation(Acao.class);
-				if (acao.nome().equals(requisicao.getAcao())) return metodo;
+				if (acao.value().equals(requisicao.getAcao()))
+					return metodo;
 			}
 			return null;
 		}
-		
+
+		public boolean autenticar() throws IOException, ClassNotFoundException {
+			boolean retorno;
+			Requisicao reqAuth = (Requisicao) input.readObject();
+			Login login = (Login) reqAuth.getObjeto();
+			Resposta resAuth = new Resposta();
+			if (autenticacao.validar(login.getLogin(), login.getSenha())) {
+				resAuth.setStatus(Status.SUCESSO);
+				retorno = true;
+			} else {
+				resAuth.setStatus(Status.LOGIN_SENHA_INVALIDOS);
+				retorno = false;
+			}
+			enviarObjeto(resAuth);
+			return retorno;
+		}
+
+		private boolean possuiAcessoRota(Class<?> classRota) {
+			if (autenticacao == null)
+				return true;
+			if (!classRota.isAnnotationPresent(Acesso.class))
+				return true;
+			
+			Acesso acesso = classRota.getAnnotation(Acesso.class);
+			if (autenticacao.possuiAcesso(acesso.value()))
+				return true;
+			return false;
+		}
+
+		private boolean possuiAcessoAcao(Method metodo) {
+			if (autenticacao == null)
+				return true;
+			if (!metodo.isAnnotationPresent(Acesso.class))
+				return true;
+			
+			Acesso acesso = metodo.getAnnotation(Acesso.class);
+			if (autenticacao.possuiAcesso(acesso.value()))
+				return true;
+			return false;
+		}
+
 	}
 
 	public int getPort() {
@@ -135,20 +193,12 @@ public class Servidor {
 		this.rotaPackage = rotaPackage;
 	}
 
-	public Socket getClient() {
-		return client;
-	}
-
-	public void setClient(Socket client) {
-		this.client = client;
-	}
-
 	public ServerSocket getServer() {
 		return server;
 	}
 
-	public void setServer(ServerSocket server) {
-		this.server = server;
+	public void setAutenticacao(Autenticacao autenticacao) {
+		this.autenticacao = autenticacao;
 	}
-	
+
 }

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import model.Pessoa;
+import model.Usuario;
 
 public class Dados implements Serializable {
 
@@ -16,5 +17,15 @@ public class Dados implements Serializable {
 			new Pessoa("Maria"),
 			new Pessoa("Hugo")
 	));
+	
+	public static Usuario getAdmin() {
+		Usuario admin = new Usuario();
+		admin.setLogin("admin");
+		admin.setSenha("1234");
+		admin.setAcessos(new ArrayList<String>());
+		admin.getAcessos().add("pessoa");
+		admin.getAcessos().add("savePessoa");
+		return admin;
+	}
 	
 }

@@ -1,6 +1,7 @@
-/application/
-/data/
-/model/
 /org/
 /rota/
+/application/
+/model/
+/data/
 /view/
+/util/

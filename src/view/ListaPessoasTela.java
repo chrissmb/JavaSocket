@@ -21,8 +21,9 @@ import org.chrissmb.socket.shared.Resposta;
 import org.chrissmb.socket.shared.Status;
 
 import model.Pessoa;
+import util.Mensagem;
 
-public class ListaPessoas extends JFrame {
+public class ListaPessoasTela extends JFrame {
 
 	private JTable tabela;
 	private JPanel panel;
@@ -30,13 +31,13 @@ public class ListaPessoas extends JFrame {
 	private DefaultTableModel tModel;
 	private JTextField txtNome;
 
-	public ListaPessoas(Cliente cliente) {
+	public ListaPessoasTela(Cliente cliente) {
 		this.cliente = cliente;
-		criarJanela();
+		criarTela();
 	}
 
-	private void criarJanela() {
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	private void criarTela() {
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle("Pessoas");
 		setSize(600, 500);
 		panel = new JPanel();
@@ -98,7 +99,7 @@ public class ListaPessoas extends JFrame {
 			Resposta resposta =  cliente.callService("PessoaRota", "getAll");
 			
 			if (resposta.getStatus() != Status.SUCESSO) {
-				JOptionPane.showMessageDialog(null, "Erro: " + resposta.getStatus());
+				Mensagem.alert("Falha: " + resposta.getStatus());
 				return;
 			}
 			
@@ -131,7 +132,7 @@ public class ListaPessoas extends JFrame {
 			Resposta res = cliente.callService(p, "PessoaRota", "save");
 			
 			if (res.getStatus() != Status.SUCESSO) {
-				System.out.println("Erro: " + res.getStatus());
+				Mensagem.alert("Falha: " + res.getStatus());
 				return;
 			}
 			
@@ -143,5 +144,5 @@ public class ListaPessoas extends JFrame {
 			e.printStackTrace();
 		}
 	}
-
+	
 }

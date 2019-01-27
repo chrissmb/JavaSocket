@@ -32,6 +32,9 @@ public class Cliente {
 	
 	public Resposta callService(Object object, String rota, String acao) 
 			throws IOException, ClassNotFoundException {
+		if (!client.isConnected()) {
+			return null;
+		}
 		output.reset();
 		output.flush();
 		output.writeObject(new Requisicao(rota, acao, object));
@@ -41,6 +44,9 @@ public class Cliente {
 	
 	public Resposta callService(String rota, String acao) 
 			throws IOException, ClassNotFoundException {
+		if (!client.isConnected()) {
+			return null;
+		}
 		output.reset();
 		output.flush();
 		output.writeObject(new Requisicao(rota, acao));

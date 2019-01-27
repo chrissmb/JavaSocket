@@ -3,6 +3,8 @@ package model;
 import java.io.Serializable;
 import java.util.Objects;
 
+import org.chrissmb.socket.servidor.Acesso;
+
 public class Pessoa implements Serializable {
 
 	/**
