@@ -1,12 +1,12 @@
-package data;
+package org.chrissmb.simulacao.server.data;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import model.Pessoa;
-import model.Usuario;
+import org.chrissmb.simulacao.shared.model.Pessoa;
+import org.chrissmb.simulacao.shared.model.Usuario;
 
 public class Dados implements Serializable {
 

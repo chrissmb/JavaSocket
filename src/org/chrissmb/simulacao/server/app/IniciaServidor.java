@@ -1,9 +1,8 @@
-package application;
+package org.chrissmb.simulacao.server.app;
 
+import org.chrissmb.simulacao.server.data.Dados;
 import org.chrissmb.socket.servidor.Autenticacao;
 import org.chrissmb.socket.servidor.Servidor;
-
-import data.Dados;
 
 public class IniciaServidor {
 
@@ -13,6 +12,8 @@ public class IniciaServidor {
 	
 	private void start() {
 		Servidor servidor = new Servidor();
+		servidor.setRotaPackage("org.chrissmb.simulacao.server.rota");
+		
 		servidor.setAutenticacao(new Autenticacao() {
 			
 			@Override
@@ -32,6 +33,7 @@ public class IniciaServidor {
 				return false;
 			}
 		});
+		
 		servidor.start();
 	}
 

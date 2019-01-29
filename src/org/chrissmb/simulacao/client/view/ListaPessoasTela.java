@@ -1,4 +1,4 @@
-package view;
+package org.chrissmb.simulacao.client.view;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,12 +16,11 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
+import org.chrissmb.simulacao.client.util.Mensagem;
+import org.chrissmb.simulacao.shared.model.Pessoa;
 import org.chrissmb.socket.cliente.Cliente;
 import org.chrissmb.socket.shared.Resposta;
 import org.chrissmb.socket.shared.Status;
-
-import model.Pessoa;
-import util.Mensagem;
 
 public class ListaPessoasTela extends JFrame {
 

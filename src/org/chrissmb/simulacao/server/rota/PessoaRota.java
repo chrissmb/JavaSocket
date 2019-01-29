@@ -1,12 +1,11 @@
-package rota;
+package org.chrissmb.simulacao.server.rota;
 
 import java.util.List;
 
+import org.chrissmb.simulacao.server.data.Dados;
+import org.chrissmb.simulacao.shared.model.Pessoa;
 import org.chrissmb.socket.servidor.Acesso;
 import org.chrissmb.socket.shared.Acao;
-
-import data.Dados;
-import model.Pessoa;
 
 @Acesso("pessoa")
 public class PessoaRota {

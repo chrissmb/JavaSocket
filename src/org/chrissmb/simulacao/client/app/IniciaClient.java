@@ -1,12 +1,11 @@
-package application;
+package org.chrissmb.simulacao.client.app;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import org.chrissmb.simulacao.client.util.Mensagem;
+import org.chrissmb.simulacao.client.view.LoginTela;
 import org.chrissmb.socket.cliente.Cliente;
-
-import util.Mensagem;
-import view.LoginTela;
 
 public class IniciaClient {
 

@@ -1,4 +1,4 @@
-package util;
+package org.chrissmb.simulacao.client.util;
 
 import javax.swing.JOptionPane;
 

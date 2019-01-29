@@ -1,4 +1,4 @@
-package view;
+package org.chrissmb.simulacao.client.view;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,12 +11,11 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.chrissmb.simulacao.client.util.Mensagem;
 import org.chrissmb.socket.cliente.Cliente;
 import org.chrissmb.socket.shared.Login;
 import org.chrissmb.socket.shared.Resposta;
 import org.chrissmb.socket.shared.Status;
-
-import util.Mensagem;
 
 public class LoginTela extends JFrame {
 
