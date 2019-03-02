@@ -2,9 +2,13 @@ package org.chrissmb.simulacao.client.view;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.IOException;
 import java.util.List;
 
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -16,7 +20,7 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
-import org.chrissmb.simulacao.client.util.Mensagem;
+import org.chrissmb.simulacao.client.util.Tools;
 import org.chrissmb.simulacao.shared.model.Pessoa;
 import org.chrissmb.socket.cliente.Cliente;
 import org.chrissmb.socket.shared.Resposta;
@@ -24,11 +28,10 @@ import org.chrissmb.socket.shared.Status;
 
 public class ListaPessoasTela extends JFrame {
 
-	private JTable tabela;
 	private JPanel panel;
 	private Cliente cliente;
-	private DefaultTableModel tModel;
 	private JTextField txtNome;
+	private GridTable tabela;
 
 	public ListaPessoasTela(Cliente cliente) {
 		this.cliente = cliente;
@@ -38,47 +41,18 @@ public class ListaPessoasTela extends JFrame {
 	private void criarTela() {
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle("Pessoas");
-		setSize(600, 500);
 		panel = new JPanel();
 		panel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(panel);
-		panel.setLayout(null);
-		
-		JScrollPane scrollPane = new JScrollPane();
-		scrollPane.setBounds(10, 10, 300, 200);
-		panel.add(scrollPane);
-		
-		tModel = new DefaultTableModel();
-		tModel.addColumn("Id");
-		tModel.addColumn("Nome");
-		tModel.addRow(new Object[] {"", ""});
-		
-		tabela = new JTable(tModel);
-		scrollPane.setViewportView(tabela);
-		
-		JButton btnConsultar = new JButton("Consultar");
-		btnConsultar.setBounds(10, 400, 100, 30);
-		
-		btnConsultar.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				getPessoas();
-			}
-		});
-		
-		panel.add(btnConsultar);
+		GroupLayout layout = new GroupLayout(panel);
+		panel.setLayout(layout);
+		layout.setAutoCreateContainerGaps(true);
+		layout.setAutoCreateGaps(true);
 		
 		JLabel lblNome = new JLabel("Adicionar pessoa");
-		lblNome.setBounds(10, 250, 100, 30);
 		txtNome = new JTextField();
-		txtNome.setBounds(10, 280, 200, 30);
-		
-		panel.add(lblNome);
-		panel.add(txtNome);
 		
 		JButton btnSalvar = new JButton("Salvar");
-		btnSalvar.setBounds(220, 280, 100, 30);
 		
 		btnSalvar.addActionListener(new ActionListener() {
 			
@@ -88,8 +62,45 @@ public class ListaPessoasTela extends JFrame {
 			}
 		});
 		
-		panel.add(btnSalvar);
+		tabela = new GridTable();
+		tabela.addColuna("Id", "id")
+			.addColuna("Nome", "nome");
+		tabela.atualizar();
 		
+		JButton btnConsultar = new JButton("Consultar");
+		
+		btnConsultar.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				getPessoas();
+			}
+		});
+		
+		layout.setHorizontalGroup(layout.createSequentialGroup()
+			.addGroup(layout.createParallelGroup(Alignment.LEADING)
+				.addGroup(layout.createSequentialGroup()
+					.addComponent(lblNome)
+					.addComponent(txtNome)
+					.addComponent(btnSalvar)
+				)
+				.addComponent(tabela)
+				.addComponent(btnConsultar)
+			)
+		);
+		
+		layout.setVerticalGroup(layout.createSequentialGroup()
+			.addGroup(layout.createParallelGroup(Alignment.BASELINE)
+				.addComponent(lblNome)
+				.addComponent(txtNome)
+				.addComponent(btnSalvar)
+			)
+			.addComponent(tabela)
+			.addComponent(btnConsultar)
+		);
+		
+		pack();
+		Tools.centreWindow(this);
 		setVisible(true);
 	}
 	
@@ -98,7 +109,7 @@ public class ListaPessoasTela extends JFrame {
 			Resposta resposta =  cliente.callService("PessoaRota", "getAll");
 			
 			if (resposta.getStatus() != Status.SUCESSO) {
-				Mensagem.alert("Falha: " + resposta.getStatus());
+				Tools.alert("Falha: " + resposta.getStatus());
 				return;
 			}
 			
@@ -108,20 +119,12 @@ public class ListaPessoasTela extends JFrame {
 			
 			List<Pessoa> pessoas = (List<Pessoa>) resposta.getObjeto();
 			
-			preencheTabela(pessoas);
+			tabela.setDados(pessoas.toArray());
+			tabela.addMouseListener(mouseListener());
 			
 		} catch (Exception e1) {
 			JOptionPane.showMessageDialog(null, e1.getMessage());
 			e1.printStackTrace();
-		}
-	}
-	
-	private void preencheTabela(List<Pessoa> pessoas) {
-		while (tModel.getRowCount() > 0) {
-			tModel.removeRow(0);
-		}
-		for (Pessoa p : pessoas) {
-			tModel.addRow(new Object[] {p.getId(), p.getNome()});
 		}
 	}
 	
@@ -131,7 +134,7 @@ public class ListaPessoasTela extends JFrame {
 			Resposta res = cliente.callService(p, "PessoaRota", "save");
 			
 			if (res.getStatus() != Status.SUCESSO) {
-				Mensagem.alert("Falha: " + res.getStatus());
+				Tools.alert("Falha: " + res.getStatus());
 				return;
 			}
 			
@@ -139,9 +142,43 @@ public class ListaPessoasTela extends JFrame {
 			
 			getPessoas();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	private MouseListener mouseListener() {
+		return new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				// TODO Auto-generated method stub
+				System.out.println(tabela.getSelecionado());
+			}
+		};
 	}
 	
 }
