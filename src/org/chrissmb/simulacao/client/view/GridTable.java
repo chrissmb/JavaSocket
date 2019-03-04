@@ -1,13 +1,13 @@
 package org.chrissmb.simulacao.client.view;
 
-import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -18,7 +18,7 @@ public class GridTable extends JScrollPane {
 	
 	private JTable tabela;
 	private DefaultTableModel modelo;
-	private Map<String, String> colunas;
+	private List<Coluna> colunas;
 	private Object[] dados;
 	
 	public GridTable() {
@@ -35,7 +35,7 @@ public class GridTable extends JScrollPane {
 	private void build() {
 		modelo = new DefaultTableModel();
 		tabela = new JTable(modelo);
-		colunas = new HashMap<>();
+		colunas = new ArrayList<Coluna>();
 		setViewportView(tabela);
 		
 		tabela.setRowSelectionAllowed(true);
@@ -45,14 +45,19 @@ public class GridTable extends JScrollPane {
 	}
 	
 	public GridTable addColuna(String label, String atributo) {
-		colunas.put(label, atributo);
+		colunas.add(new Coluna(label, atributo));
+		return this;
+	}
+	
+	public GridTable addColuna(String label, String atributo, String mascara) {
+		colunas.add(new Coluna(label, atributo, mascara));
 		return this;
 	}
 	
 	public void atualizar() {
 		limpar();
-		for (String label: colunas.keySet()) {
-			modelo.addColumn(label);
+		for (Coluna coluna: colunas) {
+			modelo.addColumn(coluna.label);
 		}
 		processaDados();
 	}
@@ -72,11 +77,6 @@ public class GridTable extends JScrollPane {
 	private void processaDados() {
 		if (dados == null) return;
 		
-		List<String> atributos = new ArrayList<String>();
-		for (String atributo: colunas.values()) {
-			atributos.add(atributo);
-		}
-		
 		List<Object> linha;
 		
 		try {
@@ -84,17 +84,12 @@ public class GridTable extends JScrollPane {
 				Class<?> clazz = obj.getClass();
 				linha = new ArrayList<Object>();
 				
-				for (String atributo: atributos) {
-					for (Method metodo : clazz.getDeclaredMethods()) {
-						if (isGetDoAtributo(metodo.getName(), atributo)) {
-							linha.add(metodo.invoke(obj));
-						}
-					}
+				for (Coluna coluna: colunas) {
+					execMetodoDoObjeto(linha, coluna.atributo, coluna.mascara, obj, clazz);
 				}
 				modelo.addRow(linha.toArray());
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -103,8 +98,40 @@ public class GridTable extends JScrollPane {
 		StringBuilder builder = new StringBuilder(atributo);
 		builder.deleteCharAt(0);
 		builder.insert(0, atributo.toUpperCase().charAt(0));
-		builder.insert(0, "get");
-		return metodo.equals(builder.toString());
+		return metodo.equals("get" + builder.toString())
+				|| metodo.equals("is" + builder.toString());
+	}
+	
+	private void execMetodoDoObjeto(List<Object> linha, String atributo, 
+			String mascara, Object obj, Class<?> clazz) throws Exception {
+		
+		int posicaoPonto;
+		posicaoPonto = atributo.indexOf('.');
+
+		if (posicaoPonto == -1) {
+			for (Method metodo : clazz.getDeclaredMethods()) {
+				if (isGetDoAtributo(metodo.getName(), atributo)) {
+					linha.add(formataObjeto(metodo.invoke(obj), mascara));
+					continue;
+				}
+			}
+		} else {
+			StringBuilder builder = new StringBuilder(atributo);
+			String strObjFilho = builder.substring(0, posicaoPonto);
+			String atributoFiho = builder.substring(posicaoPonto +1, atributo.length());
+			for (Method metodo : clazz.getDeclaredMethods()) {
+				if (isGetDoAtributo(metodo.getName(), strObjFilho)) {
+					Object objFilho = metodo.invoke(obj);
+					if (objFilho == null) {
+						linha.add("");
+						continue;
+					}
+					Class<?> clazzFilho = objFilho.getClass();
+					execMetodoDoObjeto(linha, atributoFiho, mascara, objFilho, clazzFilho);
+					continue;
+				}
+			}
+		}
 	}
 	
 	public Object getSelecionado() {
@@ -116,5 +143,61 @@ public class GridTable extends JScrollPane {
 	
 	public void addMouseListener(MouseListener listener) {
 		tabela.addMouseListener(listener);
+	}
+	
+	private class Coluna {
+		
+		private String label;
+		private String atributo;
+		private String mascara;
+		
+		public Coluna(String label, String atributo) {
+			this.label = label;
+			this.atributo = atributo;
+		}
+		
+		public Coluna(String label, String atributo, String mascara) {
+			this.label = label;
+			this.atributo = atributo;
+			this.mascara = mascara;
+		}
+
+		@Override
+		public String toString() {
+			return String.format("Coluna [label=%s, atributo=%s, mascara=%s]", label, atributo, mascara);
+		}
+
+	}
+	
+	private String formataObjeto(Object obj, String mascara) {
+		if (obj == null) return "";
+		
+		if (obj instanceof Date) {
+			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
+			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
+			return sdf.format(obj);
+		}
+		
+		if (obj instanceof Calendar) {
+			Calendar cal = (Calendar) obj;
+			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
+			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
+			return sdf.format(cal.getTime());
+		}
+		
+		if (obj instanceof Boolean) {
+			if ((Boolean)obj) {
+				return "\u2713";
+			} else {
+				return "x";
+			}
+		}
+		
+		if (obj instanceof Number && mascara != null) {
+			DecimalFormat df = new DecimalFormat(mascara);
+			return df.format(obj);
+		}
+		
+		return obj.toString();
 	}
 }

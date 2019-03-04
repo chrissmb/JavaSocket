@@ -66,6 +66,7 @@ public class ListaPessoasTela extends JFrame {
 		tabela.addColuna("Id", "id")
 			.addColuna("Nome", "nome");
 		tabela.atualizar();
+		tabela.addMouseListener(mouseListener());
 		
 		JButton btnConsultar = new JButton("Consultar");
 		
@@ -120,7 +121,6 @@ public class ListaPessoasTela extends JFrame {
 			List<Pessoa> pessoas = (List<Pessoa>) resposta.getObjeto();
 			
 			tabela.setDados(pessoas.toArray());
-			tabela.addMouseListener(mouseListener());
 			
 		} catch (Exception e1) {
 			JOptionPane.showMessageDialog(null, e1.getMessage());
