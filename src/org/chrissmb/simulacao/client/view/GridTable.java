@@ -99,7 +99,8 @@ public class GridTable extends JScrollPane {
 		builder.deleteCharAt(0);
 		builder.insert(0, atributo.toUpperCase().charAt(0));
 		return metodo.equals("get" + builder.toString())
-				|| metodo.equals("is" + builder.toString());
+				|| metodo.equals("is" + builder.toString())
+				|| metodo.equals(atributo);
 	}
 	
 	private void execMetodoDoObjeto(List<Object> linha, String atributo, 
@@ -107,14 +108,18 @@ public class GridTable extends JScrollPane {
 		
 		int posicaoPonto;
 		posicaoPonto = atributo.indexOf('.');
-
+		boolean achouMetodo = false;
+		
 		if (posicaoPonto == -1) {
 			for (Method metodo : clazz.getDeclaredMethods()) {
 				if (isGetDoAtributo(metodo.getName(), atributo)) {
 					linha.add(formataObjeto(metodo.invoke(obj), mascara));
-					continue;
+					achouMetodo = true;
+					break;
 				}
 			}
+			if (!achouMetodo) linha.add("");
+			
 		} else {
 			StringBuilder builder = new StringBuilder(atributo);
 			String strObjFilho = builder.substring(0, posicaoPonto);
@@ -124,13 +129,17 @@ public class GridTable extends JScrollPane {
 					Object objFilho = metodo.invoke(obj);
 					if (objFilho == null) {
 						linha.add("");
-						continue;
+						achouMetodo = true;
+					} else {
+						Class<?> clazzFilho = objFilho.getClass();
+						execMetodoDoObjeto(linha, atributoFiho, mascara, objFilho, clazzFilho);
 					}
-					Class<?> clazzFilho = objFilho.getClass();
-					execMetodoDoObjeto(linha, atributoFiho, mascara, objFilho, clazzFilho);
-					continue;
+					achouMetodo = true;
+					break;
 				}
 			}
+			if (!achouMetodo) linha.add("");
+			
 		}
 	}
 	
@@ -173,14 +182,14 @@ public class GridTable extends JScrollPane {
 		if (obj == null) return "";
 		
 		if (obj instanceof Date) {
-			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
+			if (eNuloOuVazio(mascara)) mascara = "dd/MM/yyy HH:mm:ss";
 			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
 			return sdf.format(obj);
 		}
 		
 		if (obj instanceof Calendar) {
 			Calendar cal = (Calendar) obj;
-			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
+			if (eNuloOuVazio(mascara)) mascara = "dd/MM/yyy HH:mm:ss";
 			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
 			return sdf.format(cal.getTime());
 		}
@@ -199,5 +208,10 @@ public class GridTable extends JScrollPane {
 		}
 		
 		return obj.toString();
+	}
+	
+	private boolean eNuloOuVazio(String str) {
+		if (str == null) return true;
+		return str.isEmpty();
 	}
 }
