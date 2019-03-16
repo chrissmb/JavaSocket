@@ -12,13 +12,14 @@ import java.util.List;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.AbstractTableModel;
 
 public class GridTable extends JScrollPane {
+
+	private static final long serialVersionUID = 1L;
 	
 	private JTable tabela;
-	private DefaultTableModel modelo;
-	private List<Coluna> colunas;
+	private ModeloTabela modeloTabela;
 	private Object[] dados;
 	
 	public GridTable() {
@@ -33,9 +34,8 @@ public class GridTable extends JScrollPane {
 	}
 
 	private void build() {
-		modelo = new DefaultTableModel();
-		tabela = new JTable(modelo);
-		colunas = new ArrayList<Coluna>();
+		modeloTabela = new ModeloTabela();
+		tabela = new JTable(modeloTabela);
 		setViewportView(tabela);
 		
 		tabela.setRowSelectionAllowed(true);
@@ -45,28 +45,13 @@ public class GridTable extends JScrollPane {
 	}
 	
 	public GridTable addColuna(String label, String atributo) {
-		colunas.add(new Coluna(label, atributo));
+		modeloTabela.addColumn(new Coluna(label, atributo));
 		return this;
 	}
 	
 	public GridTable addColuna(String label, String atributo, String mascara) {
-		colunas.add(new Coluna(label, atributo, mascara));
+		modeloTabela.addColumn(new Coluna(label, atributo, mascara));
 		return this;
-	}
-	
-	public void atualizar() {
-		limpar();
-		for (Coluna coluna: colunas) {
-			modelo.addColumn(coluna.label);
-		}
-		processaDados();
-	}
-	
-	public void limpar() {
-		modelo.setColumnCount(0);
-		while (modelo.getRowCount() > 0) {
-			modelo.removeRow(0);
-		}
 	}
 
 	public void setDados(Object[] dados) {
@@ -74,8 +59,10 @@ public class GridTable extends JScrollPane {
 		atualizar();
 	}
 	
-	private void processaDados() {
+	public void atualizar() {
 		if (dados == null) return;
+		
+		modeloTabela.clearData();
 		
 		List<Object> linha;
 		
@@ -84,10 +71,12 @@ public class GridTable extends JScrollPane {
 				Class<?> clazz = obj.getClass();
 				linha = new ArrayList<Object>();
 				
-				for (Coluna coluna: colunas) {
-					execMetodoDoObjeto(linha, coluna.atributo, coluna.mascara, obj, clazz);
+				for (Coluna coluna: modeloTabela.colunas) {
+					Object celula = getRetornoMetodo(coluna.atributo, obj, clazz);
+					linha.add(formataObjeto(celula, coluna.mascara));
 				}
-				modelo.addRow(linha.toArray());
+				modeloTabela.addRow(linha.toArray());
+				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -99,39 +88,41 @@ public class GridTable extends JScrollPane {
 		builder.deleteCharAt(0);
 		builder.insert(0, atributo.toUpperCase().charAt(0));
 		return metodo.equals("get" + builder.toString())
-				|| metodo.equals("is" + builder.toString());
+				|| metodo.equals("is" + builder.toString())
+				|| metodo.equals(atributo);
 	}
 	
-	private void execMetodoDoObjeto(List<Object> linha, String atributo, 
-			String mascara, Object obj, Class<?> clazz) throws Exception {
+	private Object getRetornoMetodo(String atributo, Object obj, Class<?> clazz) throws Exception {
 		
 		int posicaoPonto;
 		posicaoPonto = atributo.indexOf('.');
-
+		boolean achouMetodo = false;
+		
 		if (posicaoPonto == -1) {
-			for (Method metodo : clazz.getDeclaredMethods()) {
+			for (Method metodo : clazz.getMethods()) {
 				if (isGetDoAtributo(metodo.getName(), atributo)) {
-					linha.add(formataObjeto(metodo.invoke(obj), mascara));
-					continue;
+					return metodo.invoke(obj);
 				}
 			}
+			if (!achouMetodo) return null;
+			
 		} else {
 			StringBuilder builder = new StringBuilder(atributo);
 			String strObjFilho = builder.substring(0, posicaoPonto);
 			String atributoFiho = builder.substring(posicaoPonto +1, atributo.length());
-			for (Method metodo : clazz.getDeclaredMethods()) {
+			for (Method metodo : clazz.getMethods()) {
 				if (isGetDoAtributo(metodo.getName(), strObjFilho)) {
 					Object objFilho = metodo.invoke(obj);
 					if (objFilho == null) {
-						linha.add("");
-						continue;
+						return null;
+					} else {
+						Class<?> clazzFilho = objFilho.getClass();
+						return getRetornoMetodo(atributoFiho, objFilho, clazzFilho);
 					}
-					Class<?> clazzFilho = objFilho.getClass();
-					execMetodoDoObjeto(linha, atributoFiho, mascara, objFilho, clazzFilho);
-					continue;
 				}
 			}
 		}
+		return null;
 	}
 	
 	public Object getSelecionado() {
@@ -143,6 +134,35 @@ public class GridTable extends JScrollPane {
 	
 	public void addMouseListener(MouseListener listener) {
 		tabela.addMouseListener(listener);
+	}
+	
+	private Object formataObjeto(Object obj, String mascara) {
+		if (obj == null) return "";
+		
+		if (obj instanceof Date) {
+			if (eNuloOuVazio(mascara)) mascara = "dd/MM/yyy HH:mm:ss";
+			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
+			return sdf.format(obj);
+		}
+		
+		if (obj instanceof Calendar) {
+			Calendar cal = (Calendar) obj;
+			if (eNuloOuVazio(mascara)) mascara = "dd/MM/yyy HH:mm:ss";
+			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
+			return sdf.format(cal.getTime());
+		}
+		
+		if (obj instanceof Number && mascara != null) {
+			DecimalFormat df = new DecimalFormat(mascara);
+			return df.format(obj);
+		}
+		
+		return obj;
+	}
+	
+	private boolean eNuloOuVazio(String str) {
+		if (str == null) return true;
+		return str.isEmpty();
 	}
 	
 	private class Coluna {
@@ -169,35 +189,66 @@ public class GridTable extends JScrollPane {
 
 	}
 	
-	private String formataObjeto(Object obj, String mascara) {
-		if (obj == null) return "";
+	private class ModeloTabela extends AbstractTableModel {
+
+		private static final long serialVersionUID = 1L;
 		
-		if (obj instanceof Date) {
-			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
-			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
-			return sdf.format(obj);
+		private List<Coluna> colunas;
+		private List<Object[]> linhas;
+		
+		public ModeloTabela() {
+			super();
+			colunas = new ArrayList<>();
+			linhas = new ArrayList<>();
+		}
+
+		@Override
+		public int getColumnCount() {
+			return colunas.size();
+		}
+
+		@Override
+		public int getRowCount() {
+			return linhas.size();
+		}
+
+		@Override
+		public Object getValueAt(int l, int c) {
+			return linhas.get(l)[c];
 		}
 		
-		if (obj instanceof Calendar) {
-			Calendar cal = (Calendar) obj;
-			if (mascara == null) mascara = "dd/MM/yyy-HH:mm:ss";
-			SimpleDateFormat sdf = new SimpleDateFormat(mascara);
-			return sdf.format(cal.getTime());
+		@Override
+		public String getColumnName(int column) {
+			return colunas.get(column).label;
 		}
 		
-		if (obj instanceof Boolean) {
-			if ((Boolean)obj) {
-				return "\u2713";
-			} else {
-				return "x";
-			}
+		@Override
+		public Class<?> getColumnClass(int columnIndex) {
+			Object obj = linhas.get(0)[columnIndex];
+			
+			if (obj instanceof String) return String.class;
+			if (obj instanceof Number) return Number.class;
+			if (obj instanceof Boolean) return Boolean.class;
+			if (obj instanceof Date) return Date.class;
+			if (obj instanceof Calendar) return Calendar.class;
+			
+			return Object.class;
 		}
 		
-		if (obj instanceof Number && mascara != null) {
-			DecimalFormat df = new DecimalFormat(mascara);
-			return df.format(obj);
+		public void addRow(Object[] linha) {
+			int size = linhas.size();
+			linhas.add(linha);
+			fireTableRowsInserted(size, size);
 		}
 		
-		return obj.toString();
+		public void clearData() {
+			linhas = new ArrayList<>();
+			fireTableStructureChanged();
+		}
+		
+		public void addColumn(Coluna coluna) {
+			colunas.add(coluna);
+			fireTableStructureChanged();
+		}
 	}
 }
