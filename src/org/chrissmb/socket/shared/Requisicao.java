@@ -2,6 +2,10 @@ package org.chrissmb.socket.shared;
 
 import java.io.Serializable;
 
+/**
+ * @author Christopher Monteiro
+ *
+ */
 public class Requisicao implements Serializable{
 	
 	/**

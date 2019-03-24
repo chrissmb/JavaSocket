@@ -14,6 +14,24 @@ import org.chrissmb.socket.shared.Requisicao;
 import org.chrissmb.socket.shared.Resposta;
 import org.chrissmb.socket.shared.Status;
 
+/**
+ * Classe para instanciar o serviço {@link java.net.ServerSocket ServerSocket}. <br>
+ * 
+ * As rotas são os nomes das classes definidas dentro da package de rotas
+ * que também é definida em {@link #setRotaPackage(String) setRotaPackage}.<br>
+ * 
+ * As acões das rotas são os métodos declarados nas classes das rotas.
+ * Necessário utilizar a anotação {@link org.chrissmb.socket.shared.Acao Acao} no método. <br>
+ * 
+ * Caso o serviço precise de autenticação, necessário defini-lo em 
+ * {@link #setAutenticacao(Autenticacao) setAutenticacao}.
+ * Se for definida a autenticação, o serviço solicitará que o client envie
+ * uma primeira chamada de serviço com o envio de um objeto do tipo 
+ * {@link org.chrissmb.socket.shared.Login Login} com rota e ação nula. 
+ * Exemplo: cliente.callService(new Login("login", "senha"), null, null);
+ * 
+ * @author Christopher Monteiro
+ */
 public class Servidor {
 
 	private int port = 1234;
@@ -24,6 +42,9 @@ public class Servidor {
 
 	private Autenticacao autenticacao;
 
+	/**
+	 * Iniciar o serviço.
+	 */
 	public void start() {
 		try {
 			server = new ServerSocket(port);
@@ -177,26 +198,47 @@ public class Servidor {
 
 	}
 
+	/**
+	 * @return número da porta TCP.
+	 */
 	public int getPort() {
 		return port;
 	}
 
+	/**
+	 * Define o número da porta TCP.
+	 * @param port (default: 1234) porta TCP.
+	 */
 	public void setPort(int port) {
 		this.port = port;
 	}
 
+	/**
+	 * @return package das rotas em String.
+	 */
 	public String getRotaPackage() {
 		return rotaPackage;
 	}
 
+	/**
+	 * @param rotaPackage (default: "rota") string com a package das classes de rota.
+	 */
 	public void setRotaPackage(String rotaPackage) {
 		this.rotaPackage = rotaPackage;
 	}
 
+	/**
+	 * @return o objeto server do tipo {@link java.net.ServerSocket ServerSocket}.
+	 */
 	public ServerSocket getServer() {
 		return server;
 	}
 
+	/**
+	 * Definir autenticação.
+	 * @param autenticacao interface para definição do comportamento da autenticação.
+	 * @see {@link org.chrissmb.socket.servidor.Autenticacao Autenticacao}
+	 */
 	public void setAutenticacao(Autenticacao autenticacao) {
 		this.autenticacao = autenticacao;
 	}

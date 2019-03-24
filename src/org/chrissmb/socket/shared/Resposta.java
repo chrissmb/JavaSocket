@@ -2,6 +2,12 @@ package org.chrissmb.socket.shared;
 
 import java.io.Serializable;
 
+
+/**
+ * Classe utilizada como resposta das chamadas de serviço
+ * @author Christopher Monteiro
+ *
+ */
 public class Resposta implements Serializable{
 	
 	/**
@@ -13,6 +19,9 @@ public class Resposta implements Serializable{
 	
 	private Status status;
 
+	/**
+	 * @return o objeto enviado pelo servidor.
+	 */
 	public Object getObjeto() {
 		return objeto;
 	}
@@ -21,6 +30,10 @@ public class Resposta implements Serializable{
 		this.objeto = objeto;
 	}
 
+	/**
+	 * @return a status da resposta do servidor.
+	 * @see {@link org.chrissmb.socket.shared.Status Status}
+	 */
 	public Status getStatus() {
 		return status;
 	}

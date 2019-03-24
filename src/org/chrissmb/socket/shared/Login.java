@@ -2,6 +2,11 @@ package org.chrissmb.socket.shared;
 
 import java.io.Serializable;
 
+/**
+ * Classe utilizada para enviar autenticação do cliente para o servidor.
+ * @author Christopher Monteiro
+ *
+ */
 public class Login implements Serializable {
 
 	private static final long serialVersionUID = 1L;
